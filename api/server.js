@@ -67,17 +67,26 @@ app.post('/login', (req, res) => {
   });
 });
 
-// Protected route
-app.get('/protected', (req, res) => {
+// Middleware to verify token for protected routes
+const verifyToken = (req, res, next) => {
   const token = req.headers['authorization'];
-
-  if (!token) return res.status(401).json({ message: 'No token provided' });
+  if (!token) {
+    return res.status(403).json({ message: 'No token provided' });
+  }
 
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(401).json({ message: 'Token invalid' });
-
-    res.status(200).json({ message: 'Protected content accessed', userId: decoded.id });
+    if (err) {
+      return res.status(401).json({ message: 'Failed to authenticate token' });
+    }
+    req.userId = decoded.id;
+    next();
   });
+};
+
+
+// Protected route (example: profile)
+app.get('/profile', verifyToken, (req, res) => {
+  res.json({ message: `Welcome to your profile, user ID: ${req.userId}` });
 });
 
 const PORT = process.env.PORT || 5000;
